@@ -1,0 +1,3 @@
+Here are the tokens returned by the lexer:
+    12   0  Nonterminal.: alpha
+    12   6  Symbol......: =
