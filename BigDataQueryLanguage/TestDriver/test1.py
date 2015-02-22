@@ -63,6 +63,9 @@ class Test(unittest.TestCase):
         },{
             'id': 'stream1893',
             'query': {'query': {'match': {'tw.company':'microsoft'}}}
+        },{
+            'id': 'stream6893',
+            'query': {'query': {'match': {'tw.company':'microsoft'}}}
         },]
         
         
@@ -92,8 +95,15 @@ class Test(unittest.TestCase):
                 }}]
                   
         for doc in docs:
-            print 'search : ',percolator.search(ELASTICSEARCH_INDEX, 'lead1', doc)     
-        
+            result = percolator.search(ELASTICSEARCH_INDEX, 'lead1', doc)
+            print result
+            
+            if len(result['matches']):
+                for match in result['matches']:
+                    print "found stream id ", match['_id'], " for doc ",doc
+            else:
+                print 'No match found for doc ', doc
+                
 
 
 if __name__ == "__main__":
