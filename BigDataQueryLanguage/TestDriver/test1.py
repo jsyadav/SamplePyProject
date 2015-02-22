@@ -38,19 +38,30 @@ def getFullQuery(str):
     }
     return full_query
 
-class Test(unittest.TestCase):
+class ParserTestCase(unittest.TestCase):
 
     def createQueries(self,str):
         print getFullQuery(str)
         
-
+    def testSearch(self):
+        #self.createQueries('twi.uh <= 56  twi.ui >= 90  tw.uu != 67')
+        self.createQueries('tw.company contains facebook tw.city contains park')
+    
+class SimpleTestCase(unittest.TestCase):
+        
     def setUp(self):
         percolator.deleteIndex(ELASTICSEARCH_INDEX)
         percolator.createIndex(ELASTICSEARCH_INDEX)
         
+        # Define all the field types
+        # this is where the data dictionary goes
         mapping =  {
                     'test-type' : {'properties' :
-                                  {'tw.company' : {'type' : 'string'}}
+                                  {'tw.company' : {'type' : 'string'},
+                                   'tw.city' : {'type' : 'string'},
+                                   'tw.contact' : {'type' : 'string'},
+                                   'tw.description' : {'type' : 'string'}
+                                  }
                                   }
                     }
         
@@ -65,7 +76,16 @@ class Test(unittest.TestCase):
             'query': {'query': {'match': {'tw.company':'microsoft'}}}
         },{
             'id': 'stream6893',
-            'query': {'query': {'match': {'tw.company':'microsoft'}}}
+            'query': {'query': {'match': {'tw.city':'Menlo Park'}}}
+        },{
+            'id' : 'stream5676',
+            'query': getFullQuery('tw.company contains facebook tw.city contains park')
+        },{
+            'id': 'stream3453',
+            'query': {'query': {'bool': {'must' : [{'match_phrase':{'tw.company':'facebook'}},{'match_phrase':{'tw.city':'Menlo Park'}}]}}}
+        },{
+            'id': 'stream4453',
+            'query': getFullQuery('tw.contact contains "Mark Zuckerberg" tw.description contains "an online networking site"')
         },]
         
         
@@ -79,30 +99,54 @@ class Test(unittest.TestCase):
     def tearDown(self):
         percolator.deleteIndex(ELASTICSEARCH_INDEX)
 
+    def assertSearchMatch(self, results, streams):
+        self.assertEqual(set([(r['_id']) for r in results]), set(streams))
 
     def testSerach(self):
         docs = [{
                'doc' : {
-                'tw.company': 'facebook'
+                'tw.company': 'facebook',
+                'streams' : ['stream8838']
                 }
                },{
                'doc' : {
-                'tw.company': 'microsoft'
+                'tw.company': 'microsoft',
+                'streams' : ['stream1893']
                 }
                },{
                'doc' : {
-                'tw.company': 'serendio'
+                'tw.company': 'serendio',
+                'streams' : []
+                }
+               },{
+               'doc' : {
+                'tw.company': 'facebook','tw.city':"Menlo Park",
+                'streams' : ['stream8838','stream6893','stream3453','stream5676']
+                }
+               },{
+               'doc' : {
+                'tw.contact': "Mark Zuckerberg",'tw.description':"an online networking site",
+                'streams' : ['stream4453']
+                }
+               },{
+               'doc' : {
+                'tw.city': 'park','tw.company': 'microsoft',
+                'streams' : ['stream6893','stream1893']
                 }}]
                   
         for doc in docs:
-            result = percolator.search(ELASTICSEARCH_INDEX, 'lead1', doc)
-            print result
+            results = percolator.search(ELASTICSEARCH_INDEX, 'lead1', doc)
+            self.debug(results, doc)
+            self.assertSearchMatch(results['matches'], doc['doc']['streams'])
             
-            if len(result['matches']):
-                for match in result['matches']:
-                    print "found stream id ", match['_id'], " for doc ",doc
-            else:
-                print 'No match found for doc ', doc
+    def debug(self,results,doc):   
+        print results 
+        
+        if len(results['matches']):
+            for match in results['matches']:
+                print "found stream id ", match['_id'], " for doc ",doc
+        else:
+            print 'No match found for doc ', doc
                 
 
 
