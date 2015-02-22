@@ -32,6 +32,7 @@ def getBoolQuery(str):
             }
     }
     
+# Get the AST for this expression
 def getFullQuery(str):
     full_query = {
         'query': getBoolQuery(str),
@@ -86,6 +87,9 @@ class SimpleTestCase(unittest.TestCase):
         },{
             'id': 'stream4453',
             'query': getFullQuery('tw.contact contains "Mark Zuckerberg" tw.description contains "an online networking site"')
+        },{
+            'id': 'stream2353',
+            'query': getFullQuery('tw.contact contains "Mark Zuckerberg"')
         },]
         
         
@@ -126,7 +130,7 @@ class SimpleTestCase(unittest.TestCase):
                },{
                'doc' : {
                 'tw.contact': "Mark Zuckerberg",'tw.description':"an online networking site",
-                'streams' : ['stream4453']
+                'streams' : ['stream4453','stream2353']
                 }
                },{
                'doc' : {
