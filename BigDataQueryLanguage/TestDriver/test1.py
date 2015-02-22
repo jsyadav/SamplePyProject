@@ -77,7 +77,7 @@ class Test(unittest.TestCase):
         percolator.waitTillReady(ELASTICSEARCH_INDEX, len(self.leads));
         
     def tearDown(self):
-        pass
+        percolator.deleteIndex(ELASTICSEARCH_INDEX)
 
 
     def testSerach(self):
