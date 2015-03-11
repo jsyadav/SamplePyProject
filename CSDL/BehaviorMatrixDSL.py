@@ -1,5 +1,5 @@
 #from csdl import CSDLParser
-from pyparsing import *
+from matplotlib.pyparsing import *
 from string import find
 
 class ExpNode(object):
@@ -16,6 +16,17 @@ class ExpNode(object):
     def solve(self):
         if self.op == 'contains':          
             return bool(find(self.lhs, self.rhs) + 1)# add 1, as bools(-1) is true
+        elif self.op == 'in':
+            self.rhs = self.rhs[1:-1].split(',')
+            if isinstance(self.rhs, type([])):
+                self.lhs = eval(self.lhs)
+                for a in self.rhs:
+                    if self.lhs == a:
+                        return True
+                else:
+                    return False
+            else:
+                return False  
         else: 
             return eval(repr(self))
         
@@ -72,6 +83,8 @@ class UnaryNode(object):
     
     def solve(self):  
         return eval(repr(self))
+    
+        
  
 operator = Regex(r"<=|>=|<>|\!=|==|<|>|not|in|regex_partial|regex_exact|geo_box|"+
                 "geo_radius|geo_polygon|contains_any|substr|contains_near|any|contains_substr|near|"+
@@ -80,7 +93,10 @@ operator = Regex(r"<=|>=|<>|\!=|==|<|>|not|in|regex_partial|regex_exact|geo_box|
 unicode_printables = u''.join(unichr(c) for c in xrange(65536)
                                         if not unichr(c).isspace()) 
 word = Word(unicode_printables)
-expr = Group(word + operator + word)
+
+sourceList = Literal('[ ') + word + ZeroOrMore("," + word) + Literal(' ] ')
+literals = word | sourceList
+expr = Group(word + operator + literals)
 expr.setParseAction(ExpNode)
 
 rule = operatorPrecedence(expr,[
@@ -88,13 +104,24 @@ rule = operatorPrecedence(expr,[
             (CaselessLiteral("and"), 2, opAssoc.LEFT,BoolAnd),
             (CaselessLiteral("or"), 2, opAssoc.LEFT,BoolOr),
             ])
+
+
+
   
 if __name__ == "__main__":
     tell = 58
     nell = 75
     kell = 30
+    source = 'twitter'
+
+    
+    rees  = rule.parseString('source in [twitter,facebook]')
+    print rees.asList()
+    print rees[0].solve()
+    
    
-    tests = ['tell < 56',
+    tests = [
+              'tell < 56',
               'tell < 56 and nell != 78',
               'tell < 56 or nell != 78',
               'NOT tell < 56',
@@ -108,10 +135,12 @@ if __name__ == "__main__":
               'not tell < 56 and nell != 78 and kell < 34',
               'tell contains ell',
               'tell contains eyll',
+              'source in [twitter,facebook] and tell > 56',
               ]
     print("tell =", tell)
     print("nell =", nell)
     print("kell =", kell)
+    print("source =", source)
     print()
     for t in tests:
         res = rule.parseString(t)
@@ -135,4 +164,3 @@ def flatten(expr):
             return False, expr
         return contains_sub_expr, " ".join(a)
     
-
