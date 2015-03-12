@@ -69,7 +69,7 @@ class ElasticSearchDSLParser(object):
         literals = (number | numberList | string | word).setName("literals").addParseAction(self.validateLiterals)("lit")
     
         # symbols
-        identifier = pp.Regex(r"[a-z][a-z_]+(?:\.[a-z][a-z_]+)+").setName("identifier").addParseAction(self.validateIdentifier)("id")
+        identifier = word
         
     
         # we'll get there...

@@ -9,6 +9,7 @@ from pyelasticsearch.client import ElasticSearch
 from pyelasticsearch.exceptions import ElasticHttpNotFoundError
 from BigDataQueryLanguage.Parser.QueryParser import *
 from BigDataQueryLanguage.ESPercolator.Percolator import *
+from BigDataQueryLanguage.Domain.ConsolidatedObject import *
 
 ELASTICSEARCH_INDEX = 'myindex'
 ELASTICSEARCH_URL = 'http://localhost:9200/'
@@ -42,81 +43,74 @@ def getFullQuery(str):
 def getAllQueries():
     queries = [{
             'id': 'stream8838',
-            'query': {'query': {'match': {'tw.company':'facebook'}}}
+            'query': {'query': {'match': {'source':'sinawebo'}}}
         },{
             'id': 'stream1893',
-            'query': {'query': {'match': {'tw.company':'microsoft'}}}
+            'query': {'query': {'match': {'keyword':'microsoft'}}}
         },{
             'id': 'stream6893',
-            'query': {'query': {'match': {'tw.city':'Menlo Park'}}}
+            'query': {'query': {'match': {'source_language':'Menlo Park'}}}
         },{
             'id' : 'stream5676',
-            'query': getFullQuery('tw.company contains facebook tw.city contains park')
+            'query': getFullQuery('source contains sinawebo source_language contains park')
         },{
             'id': 'stream3453',
-            'query': {'query': {'bool': {'must' : [{'match_phrase':{'tw.company':'facebook'}},{'match_phrase':{'tw.city':'Menlo Park'}}]}}}
-        },{
-            'id': 'stream4453',
-            'query': getFullQuery("tw.contact contains 'Mark Zuckerberg' tw.description contains 'an online networking site'")
-        },{
-            'id': 'stream2353',
-            'query': getFullQuery("tw.contact contains 'Mark Zuckerberg'")
-        },]
+            'query': {'query': {'bool': {'must' : [{'match_phrase':{'source':'sinawebo'}},{'match_phrase':{'source_language':'Menlo Park'}}]}}}
+        },
+        ]
     return queries;
+
+
+def getAllJSONTestDocs():
+    testDocs = [{
+               'doc' : {'source': 'sinawebo', 'not_available': 'junk'},
+               'streams' : ['stream8838']               
+               },{
+               'doc' : {'keyword': 'microsoft'},
+               'streams' : ['stream1893']
+               },{
+               'doc' : {'source': 'serendio'},
+               'streams' : []
+               },{
+               'doc' : {'source': 'sinawebo','source_language':"Menlo Park"},
+               'streams' : ['stream8838','stream6893','stream3453','stream5676']
+               },{
+               'doc' : {'keyword': 'microsoft','source': 'sinawebo'},
+                'streams' : ['stream8838','stream1893']
+                }]
+    return testDocs
+
+def getConsoldiateObjectDoc():
+    co = ConsolidatedDocument()
+    co.source = 'sinawebo'
+    co.keyword = 'microsoft'
+    co.source_language = 'park'
+    
+    doc = {'doc':co,
+           'streams':['stream8838','stream1893','stream6893','stream5676']}
+    
+    return doc
 
 # Define all the field types
 def getMapping():
     # this is where the data dictionary goes
     mapping =  {
-                'test-type' : {'properties' :
-                              {'tw.company' : {'type' : 'string'},
-                               'tw.city' : {'type' : 'string'},
-                               'tw.contact' : {'type' : 'string'},
-                               'tw.description' : {'type' : 'string'}                                  }
+                'co-type' : {'properties' :
+                              {'source' : {'type' : 'string'},
+                               'keyword' : {'type' : 'string'},
+                               'source_language' : {'type' : 'string'},                                }
                                }
                 }
     return mapping
-
-def getAllJSONTestDocs():
-    testDocs = [{
-               'doc' : {'tw.company': 'facebook', 'tw.not_available': 'junk'},
-               'streams' : ['stream8838']               
-               },{
-               'doc' : {'tw.company': 'microsoft'},
-               'streams' : ['stream1893']
-               },{
-               'doc' : {'tw.company': 'serendio'},
-               'streams' : []
-               },{
-               'doc' : {'tw.company': 'facebook','tw.city':"Menlo Park"},
-               'streams' : ['stream8838','stream6893','stream3453','stream5676']
-               },{
-               'doc' : {'tw.contact': "Mark Zuckerberg",'tw.description':"an online networking site"},
-               'streams' : ['stream4453','stream2353']
-               },{
-               'doc' : {'tw.city': 'park','tw.company': 'microsoft'},
-                'streams' : ['stream6893','stream1893']
-                }]
-    return testDocs
-
-class ParserTestCase(unittest.TestCase):
-
-    def createQueries(self,str):
-        print getFullQuery(str)
-        
-    def testSearch(self):
-        #self.createQueries('twi.uh <= 56  twi.ui >= 90  tw.uu != 67')
-        self.createQueries('tw.company contains facebook tw.city contains park')
-
-    
-class SimpleTestCase(unittest.TestCase):
+                
+class KafkaConsolidateObjectTestCase(unittest.TestCase):
         
     def setUp(self):
         percolator.deleteIndex(ELASTICSEARCH_INDEX)
         percolator.createIndex(ELASTICSEARCH_INDEX)
         
         #test-type as doc type
-        percolator.putMapping(ELASTICSEARCH_INDEX, 'test-type' , getMapping()) 
+        percolator.putMapping(ELASTICSEARCH_INDEX, 'co-type' , getMapping()) 
 
         #Get All the queries to be indexed
         allQueries = getAllQueries()
@@ -135,13 +129,11 @@ class SimpleTestCase(unittest.TestCase):
         self.assertEqual(set([(r['_id']) for r in results]), set(streams))
 
     def testSerach(self):
-        docs = getAllJSONTestDocs()
-                  
-        for doc in docs:
-            results = percolator.search(ELASTICSEARCH_INDEX, 'lead1', doc)
-            self.debug(results, doc)
-            self.assertSearchMatch(results['matches'], doc['streams'])
-            
+        doc = getConsoldiateObjectDoc()
+        results = percolator.search(ELASTICSEARCH_INDEX, 'lead1', doc)
+        self.debug(results, doc)
+        self.assertSearchMatch(results['matches'], doc['streams'])
+                      
     def debug(self,results,doc):   
         print results 
         
@@ -150,7 +142,9 @@ class SimpleTestCase(unittest.TestCase):
                 print "found stream id ", match['_id'], " for doc ",doc
         else:
             print 'No match found for doc ', doc
-          
+                
+
+
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

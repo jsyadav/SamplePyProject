@@ -135,6 +135,8 @@ if __name__ == "__main__":
               'not tell < 56 and nell != 78 and kell < 34',
               'tell contains ell',
               'tell contains eyll',
+              'source in [twitter] and tell > 56',
+              'source in [facebook] and tell > 56',
               'source in [twitter,facebook] and tell > 56',
               ]
     print("tell =", tell)
