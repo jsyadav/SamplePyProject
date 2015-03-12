@@ -46,7 +46,7 @@ def getAllQueries():
             'query': {'query': {'match': {'source':'sinawebo'}}}
         },{
             'id': 'stream1893',
-            'query': {'query': {'match': {'keyword':'microsoft'}}}
+            'query': {'query': {'match': {'keyword':'iphone'}}}
         },{
             'id': 'stream6893',
             'query': {'query': {'match': {'source_language':'Menlo Park'}}}
@@ -58,7 +58,7 @@ def getAllQueries():
             'query': {'query': {'bool': {'must' : [{'match_phrase':{'source':'sinawebo'}},{'match_phrase':{'source_language':'Menlo Park'}}]}}}
         },{
             'id' : 'stream5666',
-            'query': getFullQuery('source == sinawebo keyword == microsoft')
+            'query': getFullQuery('source == sinawebo keyword == iphone')
         },
         ]
     return queries;
@@ -86,7 +86,7 @@ def getAllJSONTestDocs():
 def getConsoldiateObjectDoc():
     co = ConsolidatedDocument()
     co.source = 'sinawebo'
-    co.keyword = 'microsoft'
+    co.keyword = 'iphone'
     co.source_language = 'park'
     
     doc = {'doc':co,
