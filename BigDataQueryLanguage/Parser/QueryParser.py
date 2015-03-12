@@ -41,7 +41,13 @@ class ComparisonNode(Node):
             'match_phrase': {
                  field: node
              }
-        }  
+        }
+        elif op == '==':
+            return {
+                'match_phrase': {
+                 field: node
+                 }
+            }
         else:
             raise NotImplementedError('Only "contains" comparisons are implemented.')
   

@@ -56,6 +56,9 @@ def getAllQueries():
         },{
             'id': 'stream3453',
             'query': {'query': {'bool': {'must' : [{'match_phrase':{'source':'sinawebo'}},{'match_phrase':{'source_language':'Menlo Park'}}]}}}
+        },{
+            'id' : 'stream5666',
+            'query': getFullQuery('source == sinawebo keyword == microsoft')
         },
         ]
     return queries;
@@ -87,7 +90,7 @@ def getConsoldiateObjectDoc():
     co.source_language = 'park'
     
     doc = {'doc':co,
-           'streams':['stream8838','stream1893','stream6893','stream5676']}
+           'streams':['stream8838','stream1893','stream6893','stream5676','stream5666']}
     
     return doc
 
