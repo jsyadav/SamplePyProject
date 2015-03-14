@@ -49,7 +49,7 @@ def getAllQueries():
             'query': {'query': {'match': {'keyword':'iphone'}}}
         },{
             'id': 'stream6893',
-            'query': {'query': {'match': {'source_language':'Menlo Park'}}}
+            'query': {'query': {'match_phrase': {'source_language':'Menlo Park'}}}
         },{
             'id' : 'stream5676',
             'query': getFullQuery('source contains sinawebo source_language contains park')
@@ -90,7 +90,7 @@ def getConsoldiateObjectDoc():
     co.source_language = 'park'
     
     doc = {'doc':co,
-           'streams':['stream8838','stream1893','stream6893','stream5676','stream5666']}
+           'streams':['stream8838','stream1893','stream5676','stream5666']}
     
     return doc
 
