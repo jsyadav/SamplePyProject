@@ -5,17 +5,17 @@ from matplotlib.pyparsing import *
  
 class AST(object):
     def __init__(self, t):
-        print t
+        print "__init__ AST ", t
 
                
 
-class BST(object):
+class OST(object):
     def __init__(self,t):
-        print t
+        print "__init__ OST ", t
     
 class EST(object):
     def __init__(self,t):
-        print t
+        print "__init__ EST ", t
     
 
 operator = Regex(r"<=|>=|<>|\!=|==|<|>|not|in|regex_partial|regex_exact|geo_box|"+
@@ -42,13 +42,13 @@ subexpr << nestedExpr(content=expr)
 rule = operatorPrecedence(expr,[
             (CaselessLiteral("NOT"), 1, opAssoc.RIGHT, ), 
             (CaselessLiteral("AND"), 2, opAssoc.LEFT, AST),
-            (CaselessLiteral("OR"), 2, opAssoc.LEFT,BST ),
+            (CaselessLiteral("OR"), 2, opAssoc.LEFT,OST ),
             ])
     
 #parsed = expr.parseString('tell < 56')
 #parsed = expr.parseString('(tell < 56)')
 parsed = rule.parseString('(tell < 56) AND (nell != 89) OR (tell < 65) AND (nell != 98)')
-print parsed
+print "parsed ", parsed
 
 
 #parsed = rule.parseString('tell < 5665 AND nell != 89 OR tell < 45')
