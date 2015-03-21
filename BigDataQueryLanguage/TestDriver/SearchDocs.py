@@ -36,9 +36,11 @@ class Node(list):
  
     def get_query(self):
         raise NotImplementedError()
- 
+    def get_node(self):
+        return self[0]
  
 class TextNode(Node):
+    
     def get_query(self, field='_all'):
         return {
             'term': {
@@ -60,9 +62,70 @@ class ComparisonNode(Node):
         field = self[0]
         op = self[1]
         node = self[2]
+        
+        opLookup = {
+                    '>=' : 'gte',
+                    '<=' : 'lte',
+                    '>' : 'gt',
+                    '<' : 'lt',
+                    }
+
  
         if op == ':' or op =='==':
             return node.get_query(field)
+        elif op in opLookup.keys():
+            return {
+                    'range': {
+                              field:{
+                                     opLookup[op]: node.get_node()
+                                     }
+                              }
+                    }
+        elif op == 'range':
+            rangeStr = node.get_node()
+            l = rangeStr[1:-1].split(',')
+            return {
+                    'range': {
+                              field:{
+                                     'gte':l[0],
+                                     'lte':l[1]
+                                     }
+                              }
+                    }
+        elif op == 'in':
+            rangeStr = node.get_node()
+            valueList = rangeStr[1:-1].split(',')
+            t = list()
+            for v in valueList:
+                t.append({'term':{field:v}})
+            return {
+                    'bool' :{
+                             'should' : t}
+                    }
+        elif op == '!=':                      
+            return {
+                    'bool' :{
+                             'must_not' : node.get_query(field)
+                             }
+                    }
+        elif op == 'contains_substr':
+            return {
+                    'regexp' :{
+                               field : '.*'+node.get_node()+'.*'
+                             }
+                    }
+        elif op == 'contains':
+            rangeStr = node.get_node()
+            valueList = rangeStr[1:-1].split(',')
+            t = list()
+            for v in valueList:
+                t.append({'term':{field:v}})
+            return {
+                    'bool' :{
+                             'should' : t
+                             }
+                    }   
+               
         else:
             raise NotImplementedError('Only ":" comparisons are implemented.')
 
@@ -96,7 +159,7 @@ numberList = Group(Literal('[') + number + ZeroOrMore("," + number) + Literal(']
 term = exact | word | number | numberList
 
 comparison_name = Word(unicode_printables)
-operator = Regex(r":|<=|>=|<>|\!=|==|<|>|not|in|regex_partial|regex_exact|geo_box|"+
+operator = Regex(r":|<=|>=|<>|\!=|==|<|>|not|in|range|regex_partial|regex_exact|geo_box|"+
                 "geo_radius|geo_polygon|contains_any|substr|contains_near|any|contains_substr|near|"+
                 "contains")
 
@@ -127,6 +190,7 @@ def getQuery(str):
             'filter': [node.get_query() for node in nodes]
         }
     }
+
 def getQueryString(str):
     queries = [ {
         "match" : {
@@ -168,14 +232,18 @@ def getQueryString(str):
                 }
                                   }
                             }}
-                           }, 
+                           },{ 
+        "regexp":{
+                 'contact' : '* *'
+                 },
+               }
                
                    ]
     return queries
 
 def perform_search(search_query):
     #full_query = {'query': get_query(search_query),}
-    #full_query = {'query': getQueryString(search_query)[2],}
+    #full_query = {'query': getQueryString(search_query)[7],}
     full_query = {'query': getQuery(search_query)}
     
     print "Query => ", full_query
@@ -205,13 +273,15 @@ class SearchTestCase(unittest.TestCase):
             "company": "Facebook Inc. ",
             "contact": "Mark Zuckerberg",
             "city": "Menlo Park",
-            "description": "an online networking site"
+            "description": "an online networking site",
+            "date": "2007-12-25T22:21:20"
         }, {
             "id": 2,
             "company": "Microsoft",
             "contact": "Steve Ballmer",
             "city": "Redmond",
-            "description": "software and online services"
+            "description": "software and online services",
+            "date": "1985-12-25T22:21:20"
         }]
       
         es.create_index('myindex')
@@ -221,6 +291,7 @@ class SearchTestCase(unittest.TestCase):
                                'city' : {'type' : 'string',"index":"not_analyzed"},
                                'contact' : {'type' : 'string',"index":"not_analyzed"},
                                'id' : {'type' : 'float',"index":"not_analyzed"},
+                               'date' : {'type' : 'date',},
                                }
                 }}
                     
@@ -248,11 +319,29 @@ class SearchTestCase(unittest.TestCase):
         self.assertSearchMatch('"menlo park"', [1])
         self.assertSearchMatch('"park menlo"', [])
         '''
-        exprQueries = ['company == Microsoft',
+        exprQueries = [
+                       'contact contains_substr ark',
+                       'contact contains "[Mark Zuckerberg,Steve Ballmer]"',
+                       'id != 2',
+                       'id in [0,2,1,4]',
+                       'id in [9,39,2,3]',
+                       'id range [0,1]',
+                       'id range [1,3]',
+                       'id >= 1',
+                       'id > 1',
+                       'id <= 2',
+                       'id < 2',
+                       'date > 1984-12-25T22:21:20',
+                       'date >= 1985-12-25T22:21:20',
+                       'date <= 1999-12-25T22:21:20',
+                       'date <= 2007-12-25T22:21:20',
+                       'company == Microsoft',
                       'city : Redmond and company : Microsoft',
                       'contact : \"Mark Zuckerberg\" and company : \"Facebook Inc. \"',
                       'contact == \"Mark Zuckerberg\" and company == \"Facebook Inc. \" and city == \"Menlo Park\"',
                       'contact == \"Mark Zuckerberg\" and company == \"Facebook Inc. \" and city == \"Menlo Park\" and id == 2',
+                      'contact == \"Mark Zuckerberg\" and company == \"Facebook Inc. \" and date == 2007-12-25T22:21:20 and id == 2',
+                      'contact == \"Mark Zuckerberg\" and company == \"Facebook Inc. \" and date >= 2007-12-25T22:21:20 and id == 2',
                       'city : Redmond or company : Facebook',    
                       'contact : \"Mark Zuckerberg\" or company : \"Facebook Inc. \"',
                       'contact == \"Mark Zuckerberg\" or company == \"Facebook Inc. \" or city == \"Menlo Park\"',
